@@ -100,7 +100,6 @@ if (
 }
 
 
-// Get database statistics
 
 // Count post revisions and auto-drafts
 $speed_matrix_all_post_counts = wp_count_posts();
@@ -141,20 +140,20 @@ if ( false === $speed_matrix_transients ) {
 
 
 	<?php if ( $speed_matrix_show_success ) : ?>
-		<div class="notice notice-success is-dismissible">
-			<p><strong>
-					<?php esc_html_e( 'Settings saved successfully!', 'speed-matrix' ); ?>
-				</strong></p>
-		</div>
+			<div class="notice notice-success is-dismissible">
+				<p><strong>
+						<?php esc_html_e( 'Settings saved successfully!', 'speed-matrix' ); ?>
+					</strong></p>
+			</div>
 	<?php endif; ?>
 
 	<?php if ( isset( $_POST['speed_matrix_clear_cache'] ) ) : ?>
 
-		<div class="notice notice-success is-dismissible">
-			<p><strong>
-					<?php esc_html_e( 'Cache cleared successfully!', 'speed-matrix' ); ?>
-				</strong></p>
-		</div>
+			<div class="notice notice-success is-dismissible">
+				<p><strong>
+						<?php esc_html_e( 'Cache cleared successfully!', 'speed-matrix' ); ?>
+					</strong></p>
+			</div>
 	<?php endif; ?>
 
 	<div class="speed-matrix-container">
@@ -1204,13 +1203,13 @@ if ( false === $speed_matrix_transients ) {
 									$speed_matrix_last_cleanup = get_option( 'speed_matrix_last_cleanup' );
 									if ( $speed_matrix_last_cleanup ) :
 										?>
-										<p class="description">
-											<strong>
-												<?php esc_html_e( 'Last Cleanup:', 'speed-matrix' ); ?>
-											</strong>
-											<?php echo esc_html( date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $speed_matrix_last_cleanup ) ) ); ?>
-										</p>
-										<?php
+											<p class="description">
+												<strong>
+													<?php esc_html_e( 'Last Cleanup:', 'speed-matrix' ); ?>
+												</strong>
+												<?php echo esc_html( date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $speed_matrix_last_cleanup ) ) ); ?>
+											</p>
+											<?php
 									endif;
 									?>
 								</td>

@@ -29,7 +29,7 @@ if ( ! $wp_filesystem ) {
 
 try {
 	$wp_filesystem->delete( $speed_matrix_cache_dir, true );
-} catch ( Exception $e ) {
+} catch (Exception $e) {
 	// Silent fail.
 }
 
