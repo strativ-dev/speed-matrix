@@ -895,68 +895,78 @@ class Speed_Matrix_Optimizer {
 	 * @return bool Success status.
 	 */
 	private function create_webp_image( $file_path ) {
-		// Validate path is within uploads directory
-		$upload_dir = wp_upload_dir();
-		$real_path = realpath( $file_path );
-
-		if ( false === $real_path || 0 !== strpos( $real_path, $upload_dir['basedir'] ) ) {
-			return false;
-		}
-
-		// Check file size
-		$file_size = filesize( $real_path );
-		if ( $file_size > 5 * 1024 * 1024 ) { // 5MB limit
-			return false;
-		}
-
-		$image_type = wp_check_filetype( $real_path );
-		$webp_path = preg_replace( '/\.(jpe?g|png)$/i', '.webp', $real_path );
-
-		// Skip if WebP already exists
-		if ( file_exists( $webp_path ) ) {
-			return true;
-		}
-
-		$quality = ! empty( $this->settings['webp_quality'] )
-			? absint( $this->settings['webp_quality'] )
-			: 80;
-
-		$image = null;
-
-		switch ( $image_type['type'] ) {
-			case 'image/jpeg':
-				$image = @imagecreatefromjpeg( $real_path );
-				break;
-
-			case 'image/png':
-				$image = @imagecreatefrompng( $real_path );
-				if ( $image ) {
-					// Preserve transparency
-					if ( function_exists( 'imagepalettetotruecolor' ) ) {
-						imagepalettetotruecolor( $image );
-					}
-					imagealphablending( $image, true );
-					imagesavealpha( $image, true );
-				}
-				break;
-
-			default:
-				return false;
-		}
-
-		if ( ! $image || ! is_resource( $image ) ) {
-			return false;
-		}
-
-		$result = @imagewebp( $image, $webp_path, $quality );
-		imagedestroy( $image );
-
-		if ( $result && file_exists( $webp_path ) ) {
-			chmod( $webp_path, 0644 );
-		}
-
-		return (bool) $result;
+	// Validate path is within uploads directory
+	$upload_dir = wp_upload_dir();
+	$real_path  = realpath( $file_path );
+	
+	if ( false === $real_path || 0 !== strpos( $real_path, $upload_dir['basedir'] ) ) {
+		return false;
 	}
+
+	// Check file size
+	$file_size = filesize( $real_path );
+	if ( $file_size > 5 * 1024 * 1024 ) { // 5MB limit
+		return false;
+	}
+
+	$image_type = wp_check_filetype( $real_path );
+	$webp_path  = preg_replace( '/\.(jpe?g|png)$/i', '.webp', $real_path );
+
+	// Skip if WebP already exists
+	if ( file_exists( $webp_path ) ) {
+		return true;
+	}
+
+	$quality = ! empty( $this->settings['webp_quality'] )
+		? absint( $this->settings['webp_quality'] )
+		: 80;
+
+	$image = null;
+
+	switch ( $image_type['type'] ) {
+		case 'image/jpeg':
+			$image = @imagecreatefromjpeg( $real_path );
+			break;
+
+		case 'image/png':
+			$image = @imagecreatefrompng( $real_path );
+			if ( $image ) {
+				// Preserve transparency
+				if ( function_exists( 'imagepalettetotruecolor' ) ) {
+					imagepalettetotruecolor( $image );
+				}
+				imagealphablending( $image, true );
+				imagesavealpha( $image, true );
+			}
+			break;
+
+		default:
+			return false;
+	}
+
+	if ( ! $image || ! is_resource( $image ) ) {
+		return false;
+	}
+
+	$result = @imagewebp( $image, $webp_path, $quality );
+	imagedestroy( $image );
+
+	if ( $result && file_exists( $webp_path ) ) {
+		// Use WP_Filesystem for chmod
+		global $wp_filesystem;
+
+		if ( ! $wp_filesystem ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			WP_Filesystem();
+		}
+
+		if ( $wp_filesystem ) {
+			$wp_filesystem->chmod( $webp_path, 0644 );
+		}
+	}
+
+	return (bool) $result;
+}
 
 
 	/**
@@ -1004,11 +1014,13 @@ class Speed_Matrix_Optimizer {
 	 * @return bool Browser support status.
 	 */
 	private function browser_supports_webp() {
-		if ( ! isset( $_SERVER['HTTP_ACCEPT'] ) ) {
-			return false;
-		}
-		return false !== strpos( $_SERVER['HTTP_ACCEPT'], 'image/webp' );
+	if ( ! isset( $_SERVER['HTTP_ACCEPT'] ) ) {
+		return false;
 	}
+	
+	$accept = sanitize_text_field( wp_unslash( $_SERVER['HTTP_ACCEPT'] ) );
+	return false !== strpos( $accept, 'image/webp' );
+}
 
 	/**
 	 * Optimize Google Fonts loading

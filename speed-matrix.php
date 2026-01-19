@@ -3,18 +3,18 @@
  * Speed Matrix
  *
  * @package           Speed_Matrix
- * @author            strativ
- * @copyright         2025 strativ
+ * @author            Strativ
+ * @copyright         2025 Strativ
  * @license           GPL-2.0-or-later
  *
  * @wordpress-plugin
  * Plugin Name:       Speed Matrix
- * Plugin URI:        https://github.com/yourusername/speed-matrix
- * Description:       Ultimate WordPress performance optimizer.PageSpeed scores with advanced caching, CSS/JS optimization, lazy loading, and more.
+ * Plugin URI:        https://github.com/strativ-dev/speed-matrix
+ * Description:       Ultimate WordPress performance optimizer with improved PageSpeed scores. Features advanced caching, CSS/JS optimization, lazy loading, and more.
  * Version:           1.0.0
  * Requires at least: 5.8
  * Requires PHP:      7.4
- * Author:            strativ
+ * Author:            Strativ
  * Author URI:        https://strativ.se/
  * Text Domain:       speed-matrix
  * Domain Path:       /languages

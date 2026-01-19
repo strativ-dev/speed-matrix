@@ -2,6 +2,7 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
 class Speed_Matrix_Admin {
 	private $plugin_name;
 	private $version;
@@ -24,8 +25,6 @@ class Speed_Matrix_Admin {
 		);
 	}
 
-
-
 	/**
 	 * Enqueue admin JS
 	 */
@@ -44,7 +43,6 @@ class Speed_Matrix_Admin {
 		}
 	}
 
-
 	/**
 	 * Add plugin menu
 	 */
@@ -60,91 +58,22 @@ class Speed_Matrix_Admin {
 	}
 
 	/**
-	 * Add admin bar menu with cache stats
+	 * Add admin bar menu
+	 *
+	 * @param WP_Admin_Bar $wp_admin_bar Admin bar instance.
 	 */
 	public function add_admin_bar_menu( $wp_admin_bar ) {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 
-		$stats = $this->get_cache_count();
-		$cache_count = $stats['count'] . ' | ' . $this->format_bytes( $stats['size'] );
-
-		$wp_admin_bar->add_node( array(
-			'id' => 'speed-matrix',
-			'title' => __( 'Speed Matrix', 'speed-matrix' ) . ' (' . $cache_count . ')',
-			'href' => admin_url( 'admin.php?page=speed-matrix' ),
-		) );
-	}
-
-	/**
-	 * Get cache statistics
-	 *
-	 * @return array Array with 'count' and 'size'
-	 */
-	private function get_cache_count() {
-		$cache_dir = defined( 'SPEED_MATRIX_CACHE_DIR' )
-			? SPEED_MATRIX_CACHE_DIR
-			: WP_CONTENT_DIR . '/cache/speed-matrix/';
-
-		$stats = array(
-			'count' => 0,
-			'size' => 0,
+		$wp_admin_bar->add_node(
+			array(
+				'id' => 'speed-matrix',
+				'title' => __( 'Speed Matrix', 'speed-matrix' ),
+				'href' => esc_url( admin_url( 'admin.php?page=speed-matrix' ) ),
+			)
 		);
-
-		if ( ! is_dir( $cache_dir ) ) {
-			return $stats;
-		}
-
-		try {
-			$files = new RecursiveIteratorIterator(
-				new RecursiveDirectoryIterator( $cache_dir, RecursiveDirectoryIterator::SKIP_DOTS ),
-				RecursiveIteratorIterator::LEAVES_ONLY
-			);
-
-			foreach ( $files as $file ) {
-				if ( $file->isFile() ) {
-					$stats['count']++;
-					$stats['size'] += $file->getSize();
-				}
-			}
-		} catch (Exception $e) {
-			// Fallback: simple glob
-			$patterns = array(
-				$cache_dir . '*.html',
-				$cache_dir . 'html/*.html',
-				$cache_dir . 'css/*.css',
-				$cache_dir . 'js/*.js',
-			);
-
-			foreach ( $patterns as $pattern ) {
-				foreach ( glob( $pattern ) as $file ) {
-					if ( is_file( $file ) ) {
-						$stats['count']++;
-						$stats['size'] += filesize( $file );
-					}
-				}
-			}
-		}
-
-		return $stats;
-	}
-
-	/**
-	 * Format bytes to human-readable string
-	 *
-	 * @param int $bytes
-	 * @param int $precision
-	 * @return string
-	 */
-	private function format_bytes( $bytes, $precision = 2 ) {
-		$units = array( 'B', 'KB', 'MB', 'GB', 'TB' );
-		$bytes = max( $bytes, 0 );
-		$pow = $bytes ? floor( log( $bytes, 1024 ) ) : 0;
-		$pow = min( $pow, count( $units ) - 1 );
-		$bytes /= pow( 1024, $pow );
-
-		return round( $bytes, $precision ) . ' ' . $units[ $pow ];
 	}
 
 	/**
@@ -161,12 +90,15 @@ class Speed_Matrix_Admin {
 
 	/**
 	 * Add "Settings" link on Plugins page
+	 *
+	 * @param array $links Existing plugin action links.
+	 * @return array Modified action links.
 	 */
 	public function add_action_links( $links ) {
 		$settings_link = sprintf(
 			'<a href="%s">%s</a>',
-			admin_url( 'admin.php?page=speed-matrix' ),
-			__( 'Settings', 'speed-matrix' )
+			esc_url( admin_url( 'admin.php?page=speed-matrix' ) ),
+			esc_html__( 'Settings', 'speed-matrix' )
 		);
 		array_unshift( $links, $settings_link );
 		return $links;
