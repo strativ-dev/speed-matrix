@@ -1,0 +1,261 @@
+.speed-matrix-wrapper {
+  margin: 20px 0 0 0;
+}
+.speed-matrix-container {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+}
+.speed-matrix-sidebar {
+  width: 200px;
+  flex-shrink: 0;
+}
+.speed-matrix-wrapper .sidebar-section {
+  background: #fff;
+  border: 1px solid #ddd;
+  margin-bottom: 20px;
+}
+.speed-matrix-wrapper .plugin-status {
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.speed-matrix-wrapper .status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.speed-matrix-wrapper .plugin-status.active .status-dot {
+  background: #46b450;
+}
+.speed-matrix-wrapper .plugin-status.inactive .status-dot {
+  background: #999;
+}
+.speed-matrix-wrapper .sidebar-nav {
+  background: #fff;
+  border: 1px solid #ddd;
+}
+.speed-matrix-wrapper .nav-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  color: #2c3338;
+  text-decoration: none;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+.speed-matrix-wrapper .nav-item:last-child {
+  border-bottom: none;
+}
+.speed-matrix-wrapper .nav-item:hover {
+  background: #f6f7f7;
+}
+.speed-matrix-wrapper .sidebar-nav a:focus {
+  outline: none !important;
+}
+.speed-matrix-wrapper .nav-item.active {
+  background: #0073aa;
+  color: #fff;
+}
+.speed-matrix-wrapper .nav-item .dashicons {
+  margin-right: 8px;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+.speed-matrix-wrapper .sidebar-footer {
+  margin-top: 20px;
+}
+.speed-matrix-wrapper .button-block {
+  width: 100%;
+  text-align: center;
+}
+.speed-matrix-wrapper .speed-matrix-content {
+  flex: 1;
+  min-width: 0;
+}
+.speed-matrix-wrapper .content-tab {
+  display: none;
+}
+.speed-matrix-wrapper .content-tab.active {
+  display: block;
+}
+.speed-matrix-wrapper .section-header {
+  background: #fff;
+  border: 1px solid #ddd;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.speed-matrix-wrapper .section-header h2 {
+  margin: 0 0 5px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.speed-matrix-wrapper .settings-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.speed-matrix-wrapper .settings-card h3 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  font-weight: 600;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+.speed-matrix-wrapper .form-table th {
+  width: 280px;
+  padding: 15px 10px 15px 0;
+  font-weight: 500;
+}
+.speed-matrix-wrapper .form-table td {
+  padding: 15px 0;
+}
+.speed-matrix-wrapper .description {
+  margin: 5px 0 0 0;
+  font-size: 13px;
+  color: #646970;
+}
+.speed-matrix-wrapper .toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+}
+.speed-matrix-wrapper .toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.speed-matrix-wrapper .toggle-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ddd;
+  transition: 0.3s;
+  border-radius: 24px;
+}
+.speed-matrix-wrapper .toggle-slider:before {
+  position: absolute;
+  content: '';
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+.speed-matrix-wrapper .toggle-switch input:checked + .toggle-slider {
+  background-color: #fe5101;
+}
+.speed-matrix-wrapper .toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+.speed-matrix-wrapper .preset-card {
+  border-left: 4px solid #fe5101;
+}
+.speed-matrix-wrapper .preset-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+  margin: 20px 0;
+}
+.speed-matrix-wrapper .preset-option {
+  cursor: pointer;
+}
+.speed-matrix-wrapper .preset-option input[type='radio'] {
+  display: none;
+}
+.speed-matrix-wrapper .preset-box {
+  border: 2px solid #ddd;
+  padding: 20px;
+  text-align: center;
+  border-radius: 4px;
+  transition: all 0.3s;
+  position: relative;
+  background: #fff;
+}
+.speed-matrix-wrapper .preset-box:hover {
+  border-color: #fe5101;
+}
+.speed-matrix-wrapper .preset-option input[type='radio']:checked + .preset-box {
+  border-color: #fe5101;
+  background: #f0f8ff;
+}
+.speed-matrix-wrapper .preset-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+.speed-matrix-wrapper .preset-desc {
+  font-size: 13px;
+  color: #646970;
+}
+.speed-matrix-wrapper .preset-badge {
+  position: absolute;
+  top: -10px;
+  right: 10px;
+  background: #0073aa;
+  color: #fff;
+  padding: 2px 8px;
+  font-size: 11px;
+  border-radius: 3px;
+}
+.speed-matrix-wrapper .form-footer {
+  background: #fff;
+  border: 1px solid #ddd;
+  padding: 15px 20px;
+  text-align: right;
+}
+.speed-matrix-wrapper .tool-buttons {
+  display: flex;
+  gap: 10px;
+}
+.speed-matrix-wrapper .quick-guide {
+  padding-left: 20px;
+  line-height: 1.8;
+}
+@media (max-width: 782px) {
+  .speed-matrix-wrapper .speed-matrix-container {
+    flex-direction: column;
+  }
+  .speed-matrix-wrapper .speed-matrix-sidebar {
+    width: 100%;
+  }
+  .speed-matrix-wrapper .sidebar-nav {
+    display: flex;
+    overflow-x: auto;
+  }
+  .speed-matrix-wrapper .nav-item {
+    border-bottom: none;
+    border-right: 1px solid #ddd;
+    white-space: nowrap;
+  }
+  .speed-matrix-wrapper .form-table th,
+  .speed-matrix-wrapper .form-table td {
+    display: block;
+    width: 100%;
+    padding: 10px 0;
+  }
+}
+
+/* Admin CSS for Icon */
+.speed-matrix-plugin-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#adminmenu .wp-menu-image.dashicons-before img {
+  padding: 8px 0 0;
+  max-width: 20px;
+}
