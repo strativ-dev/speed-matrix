@@ -35,9 +35,6 @@ class Speed_Matrix_Optimizer {
 
 		$this->settings = get_option( 'speed_matrix_settings', array() );
 
-
-
-
 		$this->excluded_urls = ! empty( $this->settings['exclude_urls'] )
 			? array_map( 'trim', explode( "\n", $this->settings['exclude_urls'] ) )
 			: array();
@@ -297,11 +294,34 @@ class Speed_Matrix_Optimizer {
 		}
 	}
 
+
 	/**
-	 * Start HTML minification
+	 * Initialize HTML minification using WordPress template output buffer
 	 */
 	public function start_html_minification() {
+		if ( function_exists( 'wp_template_output_buffer_start' ) ) {
+			wp_template_output_buffer_start( array( $this, 'minify_html' ) );
+		} else {
+			// Fallback for older WordPress versions
+			add_action( 'template_redirect', array( $this, 'start_output_buffer' ), 0 );
+			add_action( 'shutdown', array( $this, 'end_output_buffer' ), 999 );
+		}
+	}
+
+	/**
+	 * Start output buffer (fallback for WP < 6.9)
+	 */
+	public function start_output_buffer() {
 		ob_start( array( $this, 'minify_html' ) );
+	}
+
+	/**
+	 * End output buffer and flush (fallback for WP < 6.9)
+	 */
+	public function end_output_buffer() {
+		if ( ob_get_level() > 0 ) {
+			ob_end_flush();
+		}
 	}
 
 	/**
@@ -1246,29 +1266,23 @@ class Speed_Matrix_Optimizer {
 		// Remove query strings
 		$url = strtok( $url, '?' );
 
-		// Convert URL to path
+		// Get base directories using WordPress functions
 		$upload_dir = wp_upload_dir();
 		$content_url = content_url();
+		$content_dir = defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : ABSPATH . 'wp-content';
 
-		// Try various base URLs
-		$base_urls = array(
-			site_url(),
-			home_url(),
-			$content_url,
-			$upload_dir['baseurl'],
+		// Try various base URLs with their corresponding paths
+		$url_path_map = array(
+			site_url() => untrailingslashit( ABSPATH ),
+			home_url() => untrailingslashit( ABSPATH ),
+			$content_url => $content_dir,
+			$upload_dir['baseurl'] => $upload_dir['basedir'],
 		);
 
-		$base_paths = array(
-			ABSPATH,
-			ABSPATH,
-			WP_CONTENT_DIR,
-			$upload_dir['basedir'],
-		);
-
-		foreach ( $base_urls as $index => $base_url ) {
+		foreach ( $url_path_map as $base_url => $base_path ) {
 			if ( strpos( $url, $base_url ) === 0 ) {
 				$relative_path = str_replace( $base_url, '', $url );
-				return $base_paths[ $index ] . ltrim( $relative_path, '/' );
+				return $base_path . '/' . ltrim( $relative_path, '/' );
 			}
 		}
 
@@ -1278,9 +1292,15 @@ class Speed_Matrix_Optimizer {
 			return $this->get_file_path( $url );
 		}
 
-		// Handle relative paths
+		// Handle relative paths - try to resolve against site root
 		if ( strpos( $url, '/' ) === 0 ) {
-			return ABSPATH . ltrim( $url, '/' );
+			// First check if it's in wp-content
+			if ( strpos( $url, '/wp-content/' ) === 0 ) {
+				return $content_dir . str_replace( '/wp-content', '', $url );
+			}
+
+			// Otherwise assume it's relative to ABSPATH
+			return untrailingslashit( ABSPATH ) . $url;
 		}
 
 		return '';

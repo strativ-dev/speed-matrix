@@ -145,7 +145,8 @@ class Speed_Matrix_Cache {
 			$contents .= "\n<!-- Served from Speed Matrix Cache -->";
 
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Cached HTML is generated internally and must be served raw.
-			echo $contents;
+			echo wp_kses_post( $contents );
+
 		}
 
 		exit;
@@ -237,69 +238,28 @@ class Speed_Matrix_Cache {
 			return false;
 		}
 
-		// Don't cache admin
-		if ( is_admin() ) {
+		// Don't cache admin, AJAX, cron, or REST API
+		if ( is_admin() || wp_doing_ajax() || wp_doing_cron() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
 			return false;
 		}
 
-		// Don't cache AJAX
-		if ( wp_doing_ajax() ) {
+		// Only cache GET requests without POST data
+		if ( ! $this->is_cacheable_request() ) {
 			return false;
 		}
 
-		// Don't cache cron
-		if ( wp_doing_cron() ) {
+		// Don't cache if there are non-UTM query parameters
+		if ( ! $this->has_only_utm_params() ) {
 			return false;
-		}
-
-		// Don't cache REST API
-		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
-			return false;
-		}
-
-		// Only GET requests - using WordPress recommended method
-		$request_method = isset( $_SERVER['REQUEST_METHOD'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '';
-		if ( 'GET' !== $request_method ) {
-			return false;
-		}
-
-		// No nonce verification needed - only checking if POST data exists, not using values
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Existence check only
-		if ( ! empty( $_POST ) ) {
-			return false;
-		}
-
-		// Allow UTM parameters, but not other query strings
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( ! empty( $_GET ) ) {
-			$allowed = array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content' );
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			$params = array_keys( $_GET );
-			$filtered = array_diff( $params, $allowed );
-			if ( ! empty( $filtered ) ) {
-				return false;
-			}
 		}
 
 		// Don't cache logged-in users (unless enabled)
-		if ( is_user_logged_in() ) {
-			if ( empty( $this->settings['cache_logged_in'] ) || $this->settings['cache_logged_in'] !== '1' ) {
-				return false;
-			}
-		}
-
-		// Don't cache excluded URLs
-		if ( $this->is_excluded_url() ) {
+		if ( is_user_logged_in() && empty( $this->settings['cache_logged_in'] ) ) {
 			return false;
 		}
 
-		// Don't cache 404 pages
-		if ( is_404() ) {
-			return false;
-		}
-
-		// Don't cache search results
-		if ( is_search() ) {
+		// Don't cache excluded URLs, 404 pages, or search results
+		if ( $this->is_excluded_url() || is_404() || is_search() ) {
 			return false;
 		}
 
@@ -310,6 +270,57 @@ class Speed_Matrix_Cache {
 		 * @param bool $should_cache Whether to cache this request
 		 */
 		return apply_filters( 'speed_matrix_should_cache', true );
+	}
+
+	/**
+	 * Check if the current request is cacheable (GET with no POST data)
+	 *
+	 * @return bool
+	 */
+	private function is_cacheable_request() {
+		// Check request method
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotValidated -- Comparing only
+		$request_method = isset( $_SERVER['REQUEST_METHOD'] )
+			? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) )
+			: '';
+
+		if ( 'GET' !== $request_method ) {
+			return false;
+		}
+
+		// Check for POST data
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Existence check for cache decision only
+		if ( ! empty( $_POST ) ) {
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Check if request has only UTM parameters (or no parameters)
+	 *
+	 * @return bool True if only UTM params or no params, false otherwise
+	 */
+	private function has_only_utm_params() {
+		// Nonce verification not required: Only checking parameter names (not values) 
+		// for cache decision. No data processing, saving, or state changes occur.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only cache logic
+		if ( empty( $_GET ) ) {
+			return true; // No query params is allowed
+		}
+
+		$allowed_utm_params = array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content' );
+
+		// Get and sanitize parameter names
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Checking names for cache decision
+		$query_param_names = array_keys( $_GET );
+		$sanitized_param_names = array_map( 'sanitize_key', $query_param_names );
+
+		// Check if there are any non-UTM parameters
+		$non_utm_params = array_diff( $sanitized_param_names, $allowed_utm_params );
+
+		return empty( $non_utm_params );
 	}
 
 	/**
