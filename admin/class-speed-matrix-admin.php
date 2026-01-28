@@ -32,6 +32,8 @@ class Speed_Matrix_Admin {
 		if ( function_exists( 'get_current_screen' ) ) {
 			$screen = get_current_screen();
 			if ( $screen && strpos( $screen->id, 'speed-matrix' ) !== false ) {
+
+				$settings = get_option( 'speed_matrix_settings', array() );
 				wp_enqueue_script(
 					$this->plugin_name,
 					SPEED_MATRIX_PLUGIN_URL . 'assets/js/admin.js',
@@ -39,6 +41,21 @@ class Speed_Matrix_Admin {
 					$this->version,
 					false
 				);
+
+
+
+				wp_localize_script(
+					$this->plugin_name,
+					'speedMatrixData',
+					array(
+						'settings' => $settings,
+						'i18n' => array(
+							'import_success' => __( 'Settings imported successfully!', 'speed-matrix' ),
+							'import_error' => __( 'Error importing settings', 'speed-matrix' ),
+						),
+					)
+				);
+
 			}
 		}
 	}
@@ -104,3 +121,5 @@ class Speed_Matrix_Admin {
 		return $links;
 	}
 }
+
+

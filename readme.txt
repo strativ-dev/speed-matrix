@@ -1,5 +1,5 @@
 === Speed Matrix ===
-Contributors: sayed24, joystrativ, redwanstrativ, shuvostrativ
+Contributors: wpstrativ, sayed24, joystrativ, redwanstrativ, shuvostrativ
 Tags: cache, performance, optimization, lazy-load, webp
 Requires at least: 5.8
 Tested up to: 6.9

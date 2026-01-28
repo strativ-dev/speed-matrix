@@ -21,6 +21,9 @@ class Speed_Matrix_Activator {
 
 	}
 
+	/**
+	 * Create cache directory structure.
+	 */
 	private static function create_cache_directory() {
 		$speed_matrix_cache_dir = trailingslashit( SPEED_MATRIX_CACHE_DIR );
 
@@ -29,17 +32,12 @@ class Speed_Matrix_Activator {
 			wp_mkdir_p( $speed_matrix_cache_dir );
 		}
 
-		// Load WP_Filesystem.
-		global $wp_filesystem;
-
-		if ( ! $wp_filesystem ) {
-			require_once ABSPATH . 'wp-admin/includes/file.php';
-			WP_Filesystem();
-		}
-
-		if ( ! $wp_filesystem ) {
+		// Initialize WP_Filesystem 
+		if ( ! self::initialize_filesystem() ) {
 			return;
 		}
+
+		global $wp_filesystem;
 
 		// Create subdirectories.
 		$subdirs = array( 'css', 'js', 'html' );
@@ -77,7 +75,6 @@ class Speed_Matrix_Activator {
 			$wp_filesystem->chmod( $speed_matrix_cache_dir . $subdir . '/', FS_CHMOD_DIR );
 		}
 	}
-
 
 	private static function set_default_settings() {
 		// Only set defaults if settings don't exist
@@ -135,13 +132,20 @@ class Speed_Matrix_Activator {
 
 
 
+	/**
+	 * Write core htaccess rules.
+	 */
 	private static function write_core_htaccess_rules() {
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-		require_once ABSPATH . 'wp-admin/includes/misc.php';
+
+		// Check if required functions are available.
+		if ( ! function_exists( 'get_home_path' ) || ! function_exists( 'insert_with_markers' ) ) {
+			// Functions not available, cannot proceed.
+			return false;
+		}
 
 		$htaccess = get_home_path() . '.htaccess';
 
-		$core_rules = [
+		$core_rules = array(
 			'# =====================================',
 			'# SpeedMatrix Core + Compression',
 			'# =====================================',
@@ -208,12 +212,35 @@ class Speed_Matrix_Activator {
 			'    application/xml application/rss+xml \\',
 			'    image/svg+xml application/font-woff2',
 			'</IfModule>',
-		];
-
+		);
 
 		return insert_with_markers( $htaccess, 'SpeedMatrix-Core', $core_rules );
 	}
 
+
+	/**
+	 * Helper function to initialize WP_Filesystem without direct require.
+	 * 
+	 * @return bool True if filesystem is ready, false otherwise.
+	 */
+	private static function initialize_filesystem() {
+		global $wp_filesystem;
+
+		// If already initialized, return true.
+		if ( $wp_filesystem ) {
+			return true;
+		}
+
+		// Check if WP_Filesystem function exists.
+		if ( ! function_exists( 'WP_Filesystem' ) ) {
+			return false;
+		}
+
+		// Initialize filesystem.
+		$result = WP_Filesystem();
+
+		return ( $result && $wp_filesystem );
+	}
 
 
 

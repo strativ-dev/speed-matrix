@@ -211,7 +211,8 @@ class Speed_Matrix_Optimizer {
 
 		// Critical CSS
 		if ( ! empty( $this->settings['inline_critical_css'] ) && ! empty( $this->settings['critical_css'] ) ) {
-			add_action( 'wp_head', array( $this, 'inline_critical_css' ), 1 );
+
+			add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_assets' ) );
 		}
 
 		// JS Optimization
@@ -486,6 +487,29 @@ class Speed_Matrix_Optimizer {
 
 
 	/**
+	 * Register the handle and attach the inline CSS
+	 */
+	public function enqueue_frontend_assets() {
+		//  Register a virtual handle with version
+		wp_register_style(
+			'speed-matrix-critical',
+			false,
+			array(),
+			SPEED_MATRIX_VERSION
+		);
+
+		//  Get and clean the CSS
+		$critical_css = wp_strip_all_tags( $this->settings['critical_css'] );
+		$critical_css = $this->minify_css( $critical_css );
+
+		//  Add the inline style TO the handle
+		wp_add_inline_style( 'speed-matrix-critical', $critical_css );
+
+		//  Enqueue the handle so it prints to the head
+		wp_enqueue_style( 'speed-matrix-critical' );
+	}
+
+	/**
 	 * Inline critical CSS
 	 */
 	public function inline_critical_css() {
@@ -496,9 +520,8 @@ class Speed_Matrix_Optimizer {
 		$critical_css = wp_strip_all_tags( $this->settings['critical_css'] );
 		$critical_css = $this->minify_css( $critical_css );
 
-		echo '<style id="speed-matrix-critical-css">'
-			. esc_html( $critical_css )
-			. "</style>\n";
+
+		wp_add_inline_style( 'speed-matrix-critical-css', $critical_css );
 	}
 
 
