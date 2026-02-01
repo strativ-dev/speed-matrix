@@ -1,4 +1,11 @@
 <?php
+/**
+ * Speed Matrix Settings Page
+ *
+ * @package Speed_Matrix
+ * @since 1.0.0
+ */
+
 // Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -55,51 +62,64 @@ $speed_matrix_default_settings = array(
 	'test_mode' => '0',
 );
 
-$speed_matrix_settings = wp_parse_args( get_option( 'speed_matrix_settings', [] ), $speed_matrix_default_settings );
+$speed_matrix_settings = wp_parse_args( get_option( 'speed_matrix_settings', array() ), $speed_matrix_default_settings );
 
 // Handle form submission
 $speed_matrix_show_success = false;
 if ( isset( $_POST['speed_matrix_save_settings'] ) && check_admin_referer( 'speed_matrix_settings_nonce', 'speed_matrix_nonce' ) ) {
+	// Verify user has permission to save settings
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'You do not have permission to access this page.', 'speed-matrix' ) );
+	}
+
 	$speed_matrix_new_settings = array();
+
+	// Text fields
 	$speed_matrix_text_fields = array( 'optimization_preset', 'cache_expiry', 'delay_js_timeout', 'exclude_first_images', 'google_fonts_method', 'cleanup_frequency', 'lcp_image_url', 'cdn_url' );
 	foreach ( $speed_matrix_text_fields as $speed_matrix_field ) {
-		$speed_matrix_new_settings[ $speed_matrix_field ] = isset( $_POST[ $speed_matrix_field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $speed_matrix_field ] ) ) : $speed_matrix_default_settings[ $speed_matrix_field ];
+		if ( 'lcp_image_url' === $speed_matrix_field || 'cdn_url' === $speed_matrix_field ) {
+			// Sanitize URL fields
+			$speed_matrix_new_settings[ $speed_matrix_field ] = isset( $_POST[ $speed_matrix_field ] ) ? esc_url_raw( wp_unslash( $_POST[ $speed_matrix_field ] ) ) : $speed_matrix_default_settings[ $speed_matrix_field ];
+		} else {
+			$speed_matrix_new_settings[ $speed_matrix_field ] = isset( $_POST[ $speed_matrix_field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $speed_matrix_field ] ) ) : $speed_matrix_default_settings[ $speed_matrix_field ];
+		}
 	}
+
+	// Textarea fields
 	$speed_matrix_textarea_fields = array( 'delay_js_patterns', 'exclude_js', 'exclude_css', 'exclude_urls', 'dns_prefetch_urls', 'font_urls', 'critical_css' );
 	foreach ( $speed_matrix_textarea_fields as $speed_matrix_field ) {
 		$speed_matrix_new_settings[ $speed_matrix_field ] = isset( $_POST[ $speed_matrix_field ] ) ? sanitize_textarea_field( wp_unslash( $_POST[ $speed_matrix_field ] ) ) : $speed_matrix_default_settings[ $speed_matrix_field ];
 	}
+
+	// Checkbox fields
 	$speed_matrix_checkbox_fields = array_keys( $speed_matrix_default_settings );
 	$speed_matrix_checkbox_fields = array_diff( $speed_matrix_checkbox_fields, $speed_matrix_text_fields, $speed_matrix_textarea_fields );
 	foreach ( $speed_matrix_checkbox_fields as $speed_matrix_field ) {
 		$speed_matrix_new_settings[ $speed_matrix_field ] = isset( $_POST[ $speed_matrix_field ] ) ? '1' : '0';
 	}
+
 	update_option( 'speed_matrix_settings', $speed_matrix_new_settings );
 	$speed_matrix_settings = $speed_matrix_new_settings;
 	$speed_matrix_show_success = true;
 }
 
 // Handle cache clear
+$speed_matrix_cache_cleared = false;
 if (
 	isset( $_POST['speed_matrix_clear_cache'] ) &&
 	check_admin_referer( 'speed_matrix_clear_cache_nonce', 'speed_matrix_clear_nonce' )
 ) {
-	$speed_matrix_cache_dir = SPEED_MATRIX_CACHE_DIR;
+	// Verify user has permission
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'You do not have permission to access this page.', 'speed-matrix' ) );
+	}
 
-	if ( is_dir( $speed_matrix_cache_dir ) ) {
-		$speed_matrix_files = glob( $speed_matrix_cache_dir . '{,*/,*/*/}*.{html,css,js}', GLOB_BRACE );
-
-		if ( ! empty( $speed_matrix_files ) ) {
-			foreach ( $speed_matrix_files as $speed_matrix_file ) {
-				if ( is_file( $speed_matrix_file ) ) {
-					wp_delete_file( $speed_matrix_file );
-				}
-			}
-		}
+	// Use the cache class to clear cache properly
+	if ( class_exists( 'Speed_Matrix_Cache' ) ) {
+		Speed_Matrix_Cache::clear_all_static();
+		$speed_matrix_cache_cleared = true;
 	}
 }
-
-
 
 // Count post revisions and auto-drafts
 $speed_matrix_all_post_counts = wp_count_posts();
@@ -113,7 +133,6 @@ $speed_matrix_trash_comments = $speed_matrix_comment_counts->trash;
 
 // Count transients (cached for 1 hour)
 $speed_matrix_transients = wp_cache_get( 'speed_matrix_transients_count' );
-
 
 if ( false === $speed_matrix_transients ) {
 	$speed_matrix_all_options = wp_load_alloptions(); // gets all autoloaded options
@@ -138,7 +157,6 @@ if ( false === $speed_matrix_transients ) {
 		<?php esc_html_e( 'Speed Matrix Settings', 'speed-matrix' ); ?>
 	</h1>
 
-
 	<?php if ( $speed_matrix_show_success ) : ?>
 		<div class="notice notice-success is-dismissible">
 			<p><strong>
@@ -147,8 +165,7 @@ if ( false === $speed_matrix_transients ) {
 		</div>
 	<?php endif; ?>
 
-	<?php if ( isset( $_POST['speed_matrix_clear_cache'] ) ) : ?>
-
+	<?php if ( $speed_matrix_cache_cleared ) : ?>
 		<div class="notice notice-success is-dismissible">
 			<p><strong>
 					<?php esc_html_e( 'Cache cleared successfully!', 'speed-matrix' ); ?>
@@ -304,7 +321,6 @@ if ( false === $speed_matrix_transients ) {
 									</p>
 								</td>
 							</tr>
-
 						</table>
 					</div>
 
@@ -345,7 +361,6 @@ if ( false === $speed_matrix_transients ) {
 									</p>
 								</td>
 							</tr>
-
 						</table>
 					</div>
 				</div>
@@ -666,7 +681,6 @@ if ( false === $speed_matrix_transients ) {
 									</p>
 								</td>
 							</tr>
-
 						</table>
 					</div>
 				</div>
@@ -759,7 +773,6 @@ if ( false === $speed_matrix_transients ) {
 									</p>
 								</td>
 							</tr>
-
 						</table>
 					</div>
 				</div>
@@ -1012,8 +1025,6 @@ if ( false === $speed_matrix_transients ) {
 							value="<?php echo esc_attr( $speed_matrix_settings['optimization_preset'] ); ?>">
 					</div>
 
-
-
 					<div class="settings-card">
 						<h3>
 							<?php esc_html_e( 'Performance Tweaks', 'speed-matrix' ); ?>
@@ -1110,8 +1121,6 @@ if ( false === $speed_matrix_transients ) {
 							<?php esc_html_e( 'Advanced Features', 'speed-matrix' ); ?>
 						</h3>
 						<table class="form-table">
-
-
 							<tr>
 								<th scope="row">
 									<label for="cdn_url">
@@ -1198,7 +1207,7 @@ if ( false === $speed_matrix_transients ) {
 								</td>
 							</tr>
 							<tr>
-								<td>
+								<td colspan="2">
 									<?php
 									$speed_matrix_last_cleanup = get_option( 'speed_matrix_last_cleanup' );
 									if ( $speed_matrix_last_cleanup ) :
@@ -1328,12 +1337,12 @@ if ( false === $speed_matrix_transients ) {
 							<?php esc_html_e( 'Performance Testing', 'speed-matrix' ); ?>
 						</h3>
 						<div class="tool-buttons">
-							<a href="https://developers.google.com/speed/pagespeed/insights/?url=<?php echo urlencode( home_url() ); ?>"
-								target="_blank" class="button button-secondary">
+							<a href="<?php echo esc_url( 'https://developers.google.com/speed/pagespeed/insights/?url=' . urlencode( home_url() ) ); ?>"
+								target="_blank" rel="noopener noreferrer" class="button button-secondary">
 								<?php esc_html_e( 'Test with PageSpeed Insights', 'speed-matrix' ); ?>
 							</a>
-							<a href="https://gtmetrix.com/?url=<?php echo urlencode( home_url() ); ?>" target="_blank"
-								class="button button-secondary">
+							<a href="<?php echo esc_url( 'https://gtmetrix.com/?url=' . urlencode( home_url() ) ); ?>"
+								target="_blank" rel="noopener noreferrer" class="button button-secondary">
 								<?php esc_html_e( 'Test with GTmetrix', 'speed-matrix' ); ?>
 							</a>
 						</div>

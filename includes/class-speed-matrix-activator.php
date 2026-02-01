@@ -1,13 +1,24 @@
 <?php
+/**
+ * Fired during plugin activation
+ *
+ * @package Speed_Matrix
+ * @since 1.0.0
+ */
 
 // Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Speed Matrix Activator Class
+ */
 class Speed_Matrix_Activator {
 
-
+	/**
+	 * Plugin activation handler
+	 */
 	public static function activate() {
 		self::create_cache_directory();
 		self::set_default_settings();
@@ -17,15 +28,15 @@ class Speed_Matrix_Activator {
 
 		// Show admin notice
 		set_transient( 'speed_matrix_activation_notice', true, 30 );
-		add_action( 'admin_bar_menu', 'speed_matrix_admin_bar_menu', 100 );
-
 	}
 
 	/**
 	 * Create cache directory structure.
 	 */
 	private static function create_cache_directory() {
-		$speed_matrix_cache_dir = trailingslashit( SPEED_MATRIX_CACHE_DIR );
+		// Get upload directory for cache storage
+		$upload_dir = wp_upload_dir();
+		$speed_matrix_cache_dir = trailingslashit( $upload_dir['basedir'] ) . 'speed-matrix-cache/';
 
 		// Create main cache directory.
 		if ( ! file_exists( $speed_matrix_cache_dir ) ) {
@@ -69,18 +80,27 @@ class Speed_Matrix_Activator {
 		}
 
 		// Set proper permissions.
-		$wp_filesystem->chmod( $speed_matrix_cache_dir, FS_CHMOD_DIR );
+		if ( $wp_filesystem->exists( $speed_matrix_cache_dir ) ) {
+			$wp_filesystem->chmod( $speed_matrix_cache_dir, FS_CHMOD_DIR );
+		}
 
 		foreach ( $subdirs as $subdir ) {
-			$wp_filesystem->chmod( $speed_matrix_cache_dir . $subdir . '/', FS_CHMOD_DIR );
+			$subdir_path = $speed_matrix_cache_dir . $subdir . '/';
+			if ( $wp_filesystem->exists( $subdir_path ) ) {
+				$wp_filesystem->chmod( $subdir_path, FS_CHMOD_DIR );
+			}
 		}
 	}
 
+	/**
+	 * Set default plugin settings
+	 */
 	private static function set_default_settings() {
 		// Only set defaults if settings don't exist
 		if ( false === get_option( 'speed_matrix_settings' ) ) {
 			$speed_matrix_default_settings = array(
 				'optimization_preset' => 'recommended',
+				'enable_page_cache' => '0',
 				'cache_mobile_separate' => '0',
 				'enable_browser_cache' => '0',
 				'cache_expiry' => '31536000',
@@ -130,20 +150,34 @@ class Speed_Matrix_Activator {
 		}
 	}
 
-
-
 	/**
 	 * Write core htaccess rules.
 	 */
 	private static function write_core_htaccess_rules() {
-
-		// Check if required functions are available.
-		if ( ! function_exists( 'get_home_path' ) || ! function_exists( 'insert_with_markers' ) ) {
-			// Functions not available, cannot proceed.
+		// Initialize WP_Filesystem
+		if ( ! self::initialize_filesystem() ) {
 			return false;
 		}
 
-		$htaccess = get_home_path() . '.htaccess';
+		global $wp_filesystem;
+
+		// Check if required functions are available.
+		if ( ! function_exists( 'insert_with_markers' ) ) {
+			return false;
+		}
+
+		// Get home path - use uploads directory as fallback
+		$home_path = ABSPATH;
+		if ( function_exists( 'get_home_path' ) ) {
+			$home_path = get_home_path();
+		}
+
+		$htaccess = $home_path . '.htaccess';
+
+		// Check if .htaccess exists and is writable
+		if ( ! $wp_filesystem->exists( $htaccess ) || ! $wp_filesystem->is_writable( $htaccess ) ) {
+			return false;
+		}
 
 		$core_rules = array(
 			'# =====================================',
@@ -217,7 +251,6 @@ class Speed_Matrix_Activator {
 		return insert_with_markers( $htaccess, 'SpeedMatrix-Core', $core_rules );
 	}
 
-
 	/**
 	 * Helper function to initialize WP_Filesystem without direct require.
 	 * 
@@ -233,7 +266,12 @@ class Speed_Matrix_Activator {
 
 		// Check if WP_Filesystem function exists.
 		if ( ! function_exists( 'WP_Filesystem' ) ) {
-			return false;
+			// Load file.php if needed (activation context)
+			if ( file_exists( ABSPATH . 'wp-admin/includes/file.php' ) ) {
+				require_once ABSPATH . 'wp-admin/includes/file.php';
+			} else {
+				return false;
+			}
 		}
 
 		// Initialize filesystem.
@@ -241,8 +279,6 @@ class Speed_Matrix_Activator {
 
 		return ( $result && $wp_filesystem );
 	}
-
-
 
 	/**
 	 * Show activation notice with quick start instructions

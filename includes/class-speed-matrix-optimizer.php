@@ -13,10 +13,46 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class Speed_Matrix_Optimizer {
+	/**
+	 * Plugin settings
+	 *
+	 * @var array
+	 */
 	private $speed_matrix_settings;
+
+	/**
+	 * Plugin settings (alias for compatibility)
+	 *
+	 * @var array
+	 */
+	private $settings;
+
+	/**
+	 * Excluded URLs
+	 *
+	 * @var array
+	 */
 	private $excluded_urls = array();
+
+	/**
+	 * Excluded JavaScript files
+	 *
+	 * @var array
+	 */
 	private $excluded_js = array();
+
+	/**
+	 * Excluded CSS files
+	 *
+	 * @var array
+	 */
 	private $excluded_css = array();
+
+	/**
+	 * Delayed scripts patterns
+	 *
+	 * @var array
+	 */
 	private $delayed_scripts = array();
 
 	public function __construct() {
@@ -143,6 +179,8 @@ class Speed_Matrix_Optimizer {
 		// --- Save last cleanup time ---
 		update_option( 'speed_matrix_last_cleanup', current_time( 'mysql' ) );
 
+		// Remove the lock
+		delete_transient( 'speed_matrix_cleanup_running' );
 	}
 
 
@@ -296,29 +334,19 @@ class Speed_Matrix_Optimizer {
 
 
 	/**
-	 * Initialize HTML minification using WordPress template output buffer
+	 * Start HTML minification
 	 */
 	public function start_html_minification() {
-		if ( function_exists( 'wp_template_output_buffer_start' ) ) {
-			wp_template_output_buffer_start( array( $this, 'minify_html' ) );
-		} else {
-			// Fallback for older WordPress versions
-			add_action( 'template_redirect', array( $this, 'start_output_buffer' ), 0 );
-			add_action( 'shutdown', array( $this, 'end_output_buffer' ), 999 );
-		}
-	}
-
-	/**
-	 * Start output buffer (fallback for WP < 6.9)
-	 */
-	public function start_output_buffer() {
 		ob_start( array( $this, 'minify_html' ) );
+
+		// Ensure buffer is closed at shutdown
+		add_action( 'shutdown', array( $this, 'end_html_minification' ), 0 );
 	}
 
 	/**
-	 * End output buffer and flush (fallback for WP < 6.9)
+	 * End HTML minification buffer
 	 */
-	public function end_output_buffer() {
+	public function end_html_minification() {
 		if ( ob_get_level() > 0 ) {
 			ob_end_flush();
 		}
@@ -331,6 +359,8 @@ class Speed_Matrix_Optimizer {
 	 * @return string Minified HTML.
 	 */
 	public function minify_html( $html ) {
+
+
 		// Don't minify if HTML contains pre or textarea tags
 		if ( stripos( $html, '<pre' ) !== false || stripos( $html, '<textarea' ) !== false ) {
 			return $html;
@@ -347,6 +377,7 @@ class Speed_Matrix_Optimizer {
 
 		return trim( $html );
 	}
+
 
 	/**
 	 * Make CSS load asynchronously
@@ -705,11 +736,11 @@ class Speed_Matrix_Optimizer {
 	 */
 	public function add_delay_js_script() {
 		$timeout_ms = ( ! empty( $this->settings['delay_js_timeout'] ) ? intval( $this->settings['delay_js_timeout'] ) : 5 ) * 1000;
-		?>
-		<script id="speed-matrix-delay-js">
-			!function () { var e = [], t = !1; function n() { if (!t) { t = !0; for (var n = 0; n < e.length; n++) { var a = document.createElement("script"); e[n].hasAttribute("src") && a.setAttribute("src", e[n].getAttribute("src")), e[n].hasAttribute("id") && a.setAttribute("id", e[n].getAttribute("id")), e[n].hasAttribute("class") && a.setAttribute("class", e[n].getAttribute("class")), a.type = "text/javascript", e[n].textContent && (a.textContent = e[n].textContent), e[n].parentNode.replaceChild(a, e[n]) } } } ["mouseover", "keydown", "touchstart", "touchmove", "wheel"].forEach(function (e) { window.addEventListener(e, n, { passive: !0 }) }), document.addEventListener("DOMContentLoaded", function () { var t = document.querySelectorAll('script[type="speed-matrix-delayed"]'); Array.prototype.forEach.call(t, function (t) { e.push(t) }), setTimeout(n, <?php echo absint( $timeout_ms ); ?>) }) }();
-		</script>
-		<?php
+
+		$inline_script = "!function () { var e = [], t = !1; function n() { if (!t) { t = !0; for (var n = 0; n < e.length; n++) { var a = document.createElement('script'); e[n].hasAttribute('src') && a.setAttribute('src', e[n].getAttribute('src')), e[n].hasAttribute('id') && a.setAttribute('id', e[n].getAttribute('id')), e[n].hasAttribute('class') && a.setAttribute('class', e[n].getAttribute('class')), a.type = 'text/javascript', e[n].textContent && (a.textContent = e[n].textContent), e[n].parentNode.replaceChild(a, e[n]) } } } ['mouseover', 'keydown', 'touchstart', 'touchmove', 'wheel'].forEach(function (e) { window.addEventListener(e, n, { passive: !0 }) }), document.addEventListener('DOMContentLoaded', function () { var t = document.querySelectorAll('script[type=\"speed-matrix-delayed\"]'); Array.prototype.forEach.call(t, function (t) { e.push(t) }), setTimeout(n, " . absint( $timeout_ms ) . ") }) }();";
+
+		// Attach to jQuery to avoid missing dependency warning
+		wp_add_inline_script( 'jquery', $inline_script, 'after' );
 	}
 
 	/**
@@ -1269,12 +1300,15 @@ class Speed_Matrix_Optimizer {
 		// Get base directories using WordPress functions
 		$upload_dir = wp_upload_dir();
 		$content_url = content_url();
-		$content_dir = defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : ABSPATH . 'wp-content';
+		$content_dir = WP_CONTENT_DIR;
+
+		// Get site root path - use ABSPATH which is always available
+		$site_root = untrailingslashit( ABSPATH );
 
 		// Try various base URLs with their corresponding paths
 		$url_path_map = array(
-			site_url() => untrailingslashit( ABSPATH ),
-			home_url() => untrailingslashit( ABSPATH ),
+			site_url() => $site_root,
+			home_url() => $site_root,
 			$content_url => $content_dir,
 			$upload_dir['baseurl'] => $upload_dir['basedir'],
 		);
@@ -1299,8 +1333,8 @@ class Speed_Matrix_Optimizer {
 				return $content_dir . str_replace( '/wp-content', '', $url );
 			}
 
-			// Otherwise assume it's relative to ABSPATH
-			return untrailingslashit( ABSPATH ) . $url;
+			// Otherwise assume it's relative to site root
+			return $site_root . $url;
 		}
 
 		return '';
@@ -1536,14 +1570,14 @@ class Speed_Matrix_Optimizer {
 
 
 	/**
-	 * remove unused JS
+	 * Enqueue remove unused CSS script
 	 */
 	public function removed_unused_css_script() {
 		wp_enqueue_script(
-			$this->plugin_name . '-public',
+			'speed-matrix-remove-unused',
 			SPEED_MATRIX_PLUGIN_URL . 'assets/js/remove-unused.js',
 			array(),
-			$this->version,
+			SPEED_MATRIX_VERSION,
 			true
 		);
 	}

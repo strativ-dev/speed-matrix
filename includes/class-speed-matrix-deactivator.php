@@ -1,6 +1,18 @@
 <?php
 /**
- * Fired during plugin deactivation.
+ * Fired during plugin deactivation
+ *
+ * @package Speed_Matrix
+ * @since 1.0.0
+ */
+
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Speed Matrix Deactivator Class
  */
 class Speed_Matrix_Deactivator {
 
@@ -13,9 +25,14 @@ class Speed_Matrix_Deactivator {
 
 		// 2. Clean up the .htaccess markers
 		self::speed_matrix_remove_rules();
+
+		// 3. Clear any scheduled cron events
+		self::clear_scheduled_events();
 	}
 
-
+	/**
+	 * Remove htaccess rules added by the plugin
+	 */
 	private static function speed_matrix_remove_rules() {
 		// Initialize WP_Filesystem
 		if ( ! self::initialize_filesystem() ) {
@@ -24,19 +41,38 @@ class Speed_Matrix_Deactivator {
 
 		global $wp_filesystem;
 
-		// Only proceed if we have the necessary functions
+		// Check if required function exists
 		if ( ! function_exists( 'insert_with_markers' ) ) {
-			// Functions not available, skip cleanup
 			return;
 		}
 
-		$home_path = function_exists( 'get_home_path' ) ? get_home_path() : ABSPATH;
+		// Get home path safely
+		$home_path = ABSPATH;
+		if ( function_exists( 'get_home_path' ) ) {
+			$home_path = get_home_path();
+		}
+
 		$htaccess = $home_path . '.htaccess';
 
 		// Use WP_Filesystem methods instead of direct PHP functions
 		if ( $wp_filesystem->exists( $htaccess ) && $wp_filesystem->is_writable( $htaccess ) ) {
-			insert_with_markers( $htaccess, 'SpeedMatrix-Compression', array() );
+			// Remove SpeedMatrix-Core markers
+			insert_with_markers( $htaccess, 'SpeedMatrix-Core', array() );
 		}
+	}
+
+	/**
+	 * Clear all scheduled cron events
+	 */
+	private static function clear_scheduled_events() {
+		// Clear auto cleanup event
+		$timestamp = wp_next_scheduled( 'speed_matrix_auto_cleanup_event' );
+		if ( $timestamp ) {
+			wp_unschedule_event( $timestamp, 'speed_matrix_auto_cleanup_event' );
+		}
+
+		// Clear all instances of the hook
+		wp_clear_scheduled_hook( 'speed_matrix_auto_cleanup_event' );
 	}
 
 	/**
@@ -54,7 +90,12 @@ class Speed_Matrix_Deactivator {
 
 		// Check if WP_Filesystem function exists.
 		if ( ! function_exists( 'WP_Filesystem' ) ) {
-			return false;
+			// Load file.php if needed (deactivation context)
+			if ( file_exists( ABSPATH . 'wp-admin/includes/file.php' ) ) {
+				require_once ABSPATH . 'wp-admin/includes/file.php';
+			} else {
+				return false;
+			}
 		}
 
 		// Initialize filesystem.
@@ -62,5 +103,4 @@ class Speed_Matrix_Deactivator {
 
 		return ( $result && $wp_filesystem );
 	}
-
 }

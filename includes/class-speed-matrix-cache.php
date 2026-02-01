@@ -24,11 +24,25 @@ class Speed_Matrix_Cache {
 	private $speed_matrix_settings;
 
 	/**
+	 * Plugin settings (alias for compatibility)
+	 *
+	 * @var array
+	 */
+	private $settings;
+
+	/**
 	 * Cache directory path
 	 *
 	 * @var string
 	 */
 	private $speed_matrix_cache_dir;
+
+	/**
+	 * Cache directory path (alias for compatibility)
+	 *
+	 * @var string
+	 */
+	private $cache_dir;
 
 	/**
 	 * Excluded URLs
@@ -141,11 +155,11 @@ class Speed_Matrix_Cache {
 
 		if ( false !== $contents ) {
 			// Append cache info at the bottom
-			$contents .= "\n<!-- Cached by Speed Matrix on " . current_time( 'mysql' ) . " -->";
+			$contents .= "\n<!-- Cached by Speed Matrix on " . esc_html( current_time( 'mysql' ) ) . " -->";
 			$contents .= "\n<!-- Served from Speed Matrix Cache -->";
 
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Cached HTML is generated internally and must be served raw.
-			echo wp_kses_post( $contents );
+			echo $contents;
 
 		}
 
@@ -213,7 +227,7 @@ class Speed_Matrix_Cache {
 		}
 
 		// Add cache marker comment
-		$buffer .= "\n<!-- Cached by Speed Matrix on " . current_time( 'mysql' ) . " -->";
+		$buffer .= "\n<!-- Cached by Speed Matrix on " . esc_html( current_time( 'mysql' ) ) . " -->";
 
 
 		// Save cache file using WP Filesystem
@@ -279,17 +293,16 @@ class Speed_Matrix_Cache {
 	 */
 	private function is_cacheable_request() {
 		// Check request method
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotValidated -- Comparing only
 		$request_method = isset( $_SERVER['REQUEST_METHOD'] )
 			? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) )
 			: '';
 
-		if ( 'GET' !== $request_method ) {
+		if ( 'GET' !== $request_method && 'HEAD' !== $request_method ) {
 			return false;
 		}
 
-		// Check for POST data
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Existence check for cache decision only
+		// Check for POST data - we're only checking if POST data exists, not processing it
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Only checking existence for cache logic
 		if ( ! empty( $_POST ) ) {
 			return false;
 		}
@@ -303,24 +316,32 @@ class Speed_Matrix_Cache {
 	 * @return bool True if only UTM params or no params, false otherwise
 	 */
 	private function has_only_utm_params() {
-		// Nonce verification not required: Only checking parameter names (not values) 
-		// for cache decision. No data processing, saving, or state changes occur.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only cache logic
+		// Only checking parameter keys (not values) for cache decision - no data processing
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only cache decision
 		if ( empty( $_GET ) ) {
 			return true; // No query params is allowed
 		}
 
 		$allowed_utm_params = array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content' );
 
-		// Get and sanitize parameter names
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Checking names for cache decision
-		$query_param_names = array_keys( $_GET );
-		$sanitized_param_names = array_map( 'sanitize_key', $query_param_names );
+		// Get parameter keys and sanitize them
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only checking keys for cache decision
+		$params = array_keys( $_GET );
+
+		// Sanitize and validate each parameter key
+		$sanitized_params = array();
+		foreach ( $params as $param ) {
+			$sanitized_param = sanitize_key( $param );
+			// Only include if sanitization didn't change it (valid key)
+			if ( $sanitized_param === $param ) {
+				$sanitized_params[] = $sanitized_param;
+			}
+		}
 
 		// Check if there are any non-UTM parameters
-		$non_utm_params = array_diff( $sanitized_param_names, $allowed_utm_params );
+		$filtered = array_diff( $sanitized_params, $allowed_utm_params );
 
-		return empty( $non_utm_params );
+		return empty( $filtered );
 	}
 
 	/**
@@ -329,7 +350,6 @@ class Speed_Matrix_Cache {
 	 * @return bool
 	 */
 	private function is_excluded_url() {
-		// Using sanitize_text_field and wp_unslash as recommended by WordPress.org
 		$current_url = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
 
 		if ( empty( $current_url ) ) {

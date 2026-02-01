@@ -94,7 +94,6 @@ jQuery(document).ready(function ($) {
   });
 });
 
-console.log(speedMatrixData);
 // Export/Import Functions
 function exportSettings() {
   var settings = speedMatrixData.settings;
@@ -116,6 +115,14 @@ function importSettings(event) {
     reader.onload = function (e) {
       try {
         var settings = JSON.parse(e.target.result);
+
+        // Validate settings object
+        if (typeof settings !== 'object' || settings === null) {
+          alert(speedMatrixData.i18n.import_error);
+          return;
+        }
+
+        // Update form fields visually
         Object.keys(settings).forEach(function (key) {
           var element = document.querySelector('[name="' + key + '"]');
           if (element) {
@@ -126,11 +133,55 @@ function importSettings(event) {
             }
           }
         });
-        alert(speedMatrixData.i18n.import_success);
+
+        // Auto-save via AJAX
+        jQuery.ajax({
+          url: speedMatrixData.ajax_url,
+          type: 'POST',
+          data: {
+            action: 'speed_matrix_import_settings',
+            nonce: speedMatrixData.nonce,
+            settings: JSON.stringify(settings)
+          },
+          beforeSend: function () {
+            // Show loading indicator (optional)
+            jQuery('body').css('cursor', 'wait');
+          },
+          success: function (response) {
+            jQuery('body').css('cursor', 'default');
+
+            if (response.success) {
+              alert(
+                speedMatrixData.i18n.import_success ||
+                  'Settings imported successfully!'
+              );
+              // Reload page to reflect changes
+              location.reload();
+            } else {
+              var errorMsg =
+                response.data && response.data.message
+                  ? response.data.message
+                  : speedMatrixData.i18n.import_error ||
+                    'Failed to import settings.';
+              alert(errorMsg);
+            }
+          },
+          error: function (xhr, status, error) {
+            jQuery('body').css('cursor', 'default');
+            console.error('Import error:', error);
+            alert(
+              speedMatrixData.i18n.import_error || 'Failed to import settings.'
+            );
+          }
+        });
       } catch (error) {
-        alert(speedMatrixData.i18n.import_error);
+        console.error('JSON parse error:', error);
+        alert(speedMatrixData.i18n.import_error || 'Invalid settings file.');
       }
     };
     reader.readAsText(file);
   }
+
+  // Reset file input so same file can be imported again
+  event.target.value = '';
 }
