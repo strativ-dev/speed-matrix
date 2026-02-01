@@ -51,7 +51,6 @@ Speed Matrix works with all modern browsers including Chrome, Firefox, Safari, E
 
 **Support & Documentation:**
 
-* [Plugin Documentation](https://strativ.se/speed-matrix-docs/)
 * [Support Forum](https://wordpress.org/support/plugin/speed-matrix/)
 * [Visit Our Website](https://strativ.se/)
 
@@ -121,10 +120,6 @@ Please use the [WordPress.org support forum](https://wordpress.org/support/plugi
 = Does this plugin collect any data? =
 
 No, Speed Matrix does not collect or transmit any data from your website. All optimizations happen locally on your server.
-
-= Where can I find documentation? =
-
-Visit our [official documentation](https://strativ.se/speed-matrix-docs/) for detailed guides and tutorials.
 
 == Screenshots ==
 
