@@ -147,7 +147,7 @@ Visit our [official documentation](https://strativ.se/speed-matrix-docs/) for de
 * GZIP compression support
 * WordPress performance tweaks
 * Export/Import settings functionality
-* Three preset configurations (Safe, Recommended, Aggressive)
+* Three preset configurations (Safe, Recommended, Advanced)
 * Admin bar cache statistics
 * One-click cache clearing
 
