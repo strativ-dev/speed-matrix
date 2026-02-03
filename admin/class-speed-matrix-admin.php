@@ -46,15 +46,25 @@ class Speed_Matrix_Admin {
 	 * Enqueue admin CSS
 	 */
 	public function enqueue_styles() {
-		// Only load on our plugin page
+
+		// Menu CSS (always load)
+		wp_enqueue_style(
+			$this->plugin_name . '-menu',
+			SPEED_MATRIX_PLUGIN_URL . 'assets/css/speed-matrix-admin-menu.css',
+			array(),
+			$this->version,
+			'all'
+		);
+
+		// Only load the plugin page CSS
 		$screen = get_current_screen();
 		if ( ! $screen || strpos( $screen->id, 'speed-matrix' ) === false ) {
 			return;
 		}
 
 		wp_enqueue_style(
-			$this->plugin_name,
-			SPEED_MATRIX_PLUGIN_URL . 'assets/css/admin.css',
+			$this->plugin_name . '-admin',
+			SPEED_MATRIX_PLUGIN_URL . 'assets/css/speed-matrix-admin.css',
 			array(),
 			$this->version,
 			'all'
